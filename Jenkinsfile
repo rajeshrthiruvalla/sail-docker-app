@@ -2,8 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'rajeshthiruvalla/docker-sail-app'
-        DOCKER_TAG = 'latest'
         EC2_HOST = 'ubuntu@52.66.174.38'
         EC2_KEY = credentials('ec2-ssh-key') // Jenkins SSH key credential
     }
@@ -15,33 +13,26 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Deploy to EC2 with Sail') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f docker/8.4/Dockerfile ."
-            }
-        }
-
-        stage('Push to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to EC2') {
-            steps {
-                sshagent (credentials: ['ec2-ssh-key']) {
+                sshagent([env.EC2_KEY]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no $EC2_HOST '
-                            docker pull ${DOCKER_IMAGE}:${DOCKER_TAG} &&
-                            docker stop docker-app || true &&
-                            docker rm docker-app || true &&
-                            docker run -d --name docker-app -p 80:80 ${DOCKER_IMAGE}:${DOCKER_TAG}
-                        '
+                        echo "🔄 Syncing code to remote EC2..."
+                        rsync -avz --exclude='vendor' --exclude='.env' ./ \$EC2_HOST:/var/www/laravel-app
+
+                        echo "🚀 Running Sail and Laravel setup on EC2..."
+                        ssh \$EC2_HOST << 'EOF'
+                            cd /var/www/laravel-app
+
+                            echo "📦 Installing dependencies inside Sail..."
+                            ./vendor/bin/sail run --rm composer install --no-interaction --prefer-dist --optimize-autoloader
+
+                            echo "⬆️ Starting Sail services..."
+                            ./vendor/bin/sail up -d
+
+                            echo "🛠 Running migrations..."
+                            ./vendor/bin/sail artisan migrate --force
+                        EOF
                     """
                 }
             }
@@ -49,8 +40,11 @@ pipeline {
     }
 
     post {
-        always {
-            cleanWs()
+        success {
+            echo "✅ Laravel deployed to EC2 successfully!"
+        }
+        failure {
+            echo "❌ Deployment failed. Check logs."
         }
     }
 }
