@@ -15,7 +15,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sshagent([env.EC2_KEY]) {
+                sshagent(['ec2-ssh-key']) {
                     sh """
                         echo "🔄 Syncing code to EC2..."
                         rsync -avz --exclude='vendor' --exclude='.env' ./ \$EC2_HOST:/var/www/laravel-app
