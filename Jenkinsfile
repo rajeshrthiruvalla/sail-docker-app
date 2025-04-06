@@ -12,20 +12,20 @@ pipeline {
                 checkout scm
             }
         }
-
+    }
         
-        stages {
-            stage('Deploy') {
-                steps {
-                    sshagent(['ec2-ssh-key']) {
-                        sh """
-                            rsync -avz ./ \$EC2_HOST:/var/www/laravel-app
-                            ssh \$EC2_HOST "cd /var/www/laravel-app && ./vendor/bin/sail up -d"
-                        """
-                    }
+    stages {
+        stage('Deploy') {
+            steps {
+                sshagent(['ec2-ssh-key']) {
+                    sh """
+                        rsync -avz ./ \$EC2_HOST:/var/www/laravel-app
+                        ssh \$EC2_HOST "cd /var/www/laravel-app && ./vendor/bin/sail up -d"
+                    """
                 }
             }
         }
+    }
 
     post {
         success {
