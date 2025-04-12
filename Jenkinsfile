@@ -14,7 +14,14 @@ pipeline {
                 checkout scm
             }
         }
-
+        stage('Copy .env and Dockerfile from Jenkins') {
+            steps {
+                // Replace with actual path where the files are located on Jenkins server
+                sh '''
+                    cp /var/lib/jenkins/configs/.env $WORKSPACE/.env
+                '''
+            }
+        }
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
