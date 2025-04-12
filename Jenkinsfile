@@ -2,7 +2,9 @@ pipeline {
     agent any
 
     environment {
-        EC2_HOST = 'ubuntu@52.66.174.38'
+        DOCKER_IMAGE = 'rajeshthiruvalla/laravel-app'
+        DOCKER_TAG = 'latest'
+        EC2_HOST = 'ubuntu@43.204.107.156'
         EC2_KEY = credentials('ec2-ssh-key') // Jenkins SSH key credential
     }
 
@@ -13,15 +15,42 @@ pipeline {
             }
         }
 
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+            }
+        }
 
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent (credentials: ['ec2-ssh-key']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no $EC2_HOST '
+                            docker pull ${DOCKER_IMAGE}:${DOCKER_TAG} &&
+                            docker stop docker-app || true &&
+                            docker rm docker-app || true &&
+                            docker run -d --name docker-app -p 80:80 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        '
+                    """
+                }
+            }
+        }
     }
 
     post {
-        success {
-            echo "✅ Laravel deployed to EC2 successfully!"
-        }
-        failure {
-            echo "❌ Deployment failed. Check logs."
+        always {
+            cleanWs()
         }
     }
 }
