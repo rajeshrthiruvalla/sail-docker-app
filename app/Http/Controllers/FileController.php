@@ -21,10 +21,8 @@ class FileController extends Controller
             'file' => 'required|file|max:10240', // Max 10MB
         ]);
 
-        // Store file to S3 in 'uploads/' folder with public visibility
-        $path = $request->file('file')->store('uploads', [
-            'visibility' => 'public'
-        ]);
+        $file = $request->file('file');
+        $path = Storage::disk('s3')->put('uploads', $file);
 
         return redirect('/')->with('success', 'File uploaded to S3 successfully! path:'.$path);
     }
