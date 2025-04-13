@@ -26,6 +26,6 @@ class FileController extends Controller
             'visibility' => 'public'
         ]);
 
-        return redirect('/')->with('success', 'File uploaded to S3 successfully!');
+        return redirect('/')->with('success', 'File uploaded to S3 successfully! '.$path);
     }
 }
