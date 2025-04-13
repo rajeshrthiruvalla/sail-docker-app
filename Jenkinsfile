@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'rajeshthiruvalla/laravel-app'
         DOCKER_TAG = 'latest'
-        EC2_HOST = 'ubuntu@43.204.102.71'
+        EC2_HOST = 'ubuntu@52.66.67.144'
         EC2_KEY = credentials('ec2-ssh-key') // Jenkins SSH key credential
     }
 
