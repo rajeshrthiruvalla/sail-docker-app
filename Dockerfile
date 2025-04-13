@@ -69,6 +69,9 @@ COPY . /var/www/html
 RUN composer install
 RUN php artisan migrate
 
+RUN chown -R www-data:www-data /var/www/html \
+ && chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
+
 RUN chmod +x /usr/local/bin/start-container
 
 EXPOSE 80/tcp
