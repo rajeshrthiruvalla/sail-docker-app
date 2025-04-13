@@ -22,7 +22,7 @@ class FileController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = Storage::disk('s3')->put('uploads', $file);
+        $path = $file->store('uploads');
 
         return redirect('/')->with('success', 'File uploaded to S3 successfully! path:'.$path);
     }
